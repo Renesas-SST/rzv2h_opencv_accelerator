@@ -1,5 +1,17 @@
+From ae35c92061cc87de3d1839f6f4d129709e43e037 Mon Sep 17 00:00:00 2001
+From: Cong Nguyen <cong.nguyen.zn@renesas.com>
+Date: Wed, 16 Apr 2025 11:11:19 +0000
+Subject: [PATCH 3/3] support multi proc and thread
+
+Upstream-Status: Pending
+
+Signed-off-by: Cong Nguyen <cong.nguyen.zn@renesas.com>
+---
+ modules/imgproc/src/rzv2ma_drp.cpp | 209 +++++++++++++++++++++++++++++
+ 1 file changed, 209 insertions(+)
+
 diff --git a/modules/imgproc/src/rzv2ma_drp.cpp b/modules/imgproc/src/rzv2ma_drp.cpp
-index e5ae19f..44d39ce 100644
+index f9a5052ca8..1c4368ee8d 100644
 --- a/modules/imgproc/src/rzv2ma_drp.cpp
 +++ b/modules/imgproc/src/rzv2ma_drp.cpp
 @@ -35,6 +35,7 @@
@@ -40,7 +52,7 @@ index e5ae19f..44d39ce 100644
  /*****************************************
  * Method Name   : rzv2m_drp
  * Description   : Constructor
-@@ -2077,6 +2094,177 @@ int rzv2m_drp::readCornerPoints(std::vector<cv::KeyPoint> &keypoints)
+@@ -2268,6 +2285,177 @@ int rzv2m_drp::readCornerPoints(std::vector<cv::KeyPoint> &keypoints)
      return DRP_NORMAL_END;
  }
  
@@ -69,20 +81,20 @@ index e5ae19f..44d39ce 100644
 +    g_sem = sem_open(SHM_SEMAPHORE_PATH, O_RDWR | O_CREAT | O_EXCL, 0660, 1);
 +    if (EEXIST == errno)
 +    {
-+        CV_LOG_INFO(nullptr, "DRP_sem is already exists. Open Created sem.");
++        CV_LOG_INFO(NULL, "DRP_sem is already exists. Open Created sem.");
 +        waiting_count = 0;
 +        g_sem = sem_open(SHM_SEMAPHORE_PATH, O_RDWR);
 +    }
 +    else if (SEM_FAILED == g_sem)
 +    {
-+        CV_LOG_INFO(nullptr, "failed to open DRP semaphore file");
++        CV_LOG_INFO(NULL, "failed to open DRP semaphore file");
 +        g_sem = NULL;
 +        ret = -1;
 +    }
 +
 +    if (0 != ret)
 +    {
-+        CV_LOG_INFO(nullptr, "Failed in DRP_sem_open");
++        CV_LOG_INFO(NULL, "Failed in DRP_sem_open");
 +    }
 +    g_initializing = 0;
 +    return ret;
@@ -96,7 +108,7 @@ index e5ae19f..44d39ce 100644
 +******************************************/
 +static int DRP_sem_close(void)
 +{
-+    CV_LOG_INFO(nullptr, "DRP_sem_close start.");
++    CV_LOG_INFO(NULL, "DRP_sem_close start.");
 +    int ret = 0;
 +
 +    if (1 == g_initializing)
@@ -114,7 +126,7 @@ index e5ae19f..44d39ce 100644
 +    ret = sem_close(g_sem);
 +    if (0 != ret)
 +    {
-+        CV_LOG_INFO(nullptr,"Failed in DRP_sem_close");
++        CV_LOG_INFO(NULL,"Failed in DRP_sem_close");
 +    }
 +    g_sem = NULL;
 +    g_initializing = 0;
@@ -136,8 +148,8 @@ index e5ae19f..44d39ce 100644
 +
 +    waiting_count --;
 +
-+    CV_LOG_INFO(nullptr,"DRP_sem_post start");
-+    CV_LOG_INFO(nullptr, "DRP_sem_post in DRP_sem_open start.");
++    CV_LOG_INFO(NULL,"DRP_sem_post start");
++    CV_LOG_INFO(NULL, "DRP_sem_post in DRP_sem_open start.");
 +    ret = DRP_sem_open();
 +    if (0 != ret)
 +    {
@@ -146,13 +158,13 @@ index e5ae19f..44d39ce 100644
 +    ret = sem_getvalue(g_sem, &sval);
 +    if (0 != ret)
 +    {
-+        CV_LOG_INFO(nullptr, "try sem_post, but sem is invalid.");
++        CV_LOG_INFO(NULL, "try sem_post, but sem is invalid.");
 +        return -1;
 +    }
 +    /* sem value must be 0 or 1 */
 +    if (0 >= sval)
 +    {
-+        CV_LOG_INFO(nullptr, "sem_post start. wating threads = " << waiting_count);
++        CV_LOG_INFO(NULL, "sem_post start. wating threads = " << waiting_count);
 +        return sem_post(g_sem);
 +    }
 +    return 0;
@@ -169,8 +181,8 @@ index e5ae19f..44d39ce 100644
 +    int ret;
 +    struct timespec timeout;
 +    
-+    CV_LOG_INFO(nullptr, "DRP_sem_wait start");
-+    CV_LOG_INFO(nullptr, "DRP_sem_wait in DRP_sem_open start.")
++    CV_LOG_INFO(NULL, "DRP_sem_wait start");
++    CV_LOG_INFO(NULL, "DRP_sem_wait in DRP_sem_open start.")
 +    ret = DRP_sem_open();
 +    if (0 != ret)
 +    {
@@ -188,13 +200,13 @@ index e5ae19f..44d39ce 100644
 +
 +    errno = 0;
 +
-+    CV_LOG_INFO(nullptr, "sem_timedwait start. waiting threads =" << waiting_count);
++    CV_LOG_INFO(NULL, "sem_timedwait start. waiting threads =" << waiting_count);
 +    waiting_count ++;
 +
 +    ret = sem_timedwait(g_sem, &timeout);
 +    if (ETIMEDOUT == errno)
 +    {
-+        CV_LOG_INFO(nullptr, "DRP semaphore is locked too long time, so unlock and try to lock again.");
++        CV_LOG_INFO(NULL, "DRP semaphore is locked too long time, so unlock and try to lock again.");
 +        /* try again with sem_post */
 +        ret = DRP_sem_post();
 +        if (0 == ret)
@@ -203,13 +215,13 @@ index e5ae19f..44d39ce 100644
 +        }
 +        else
 +        {
-+            CV_LOG_INFO(nullptr, "Failed to unlock DRP semaphore.");
++            CV_LOG_INFO(NULL, "Failed to unlock DRP semaphore.");
 +        }
 +    }
 +
 +    if (0 != ret)
 +    {
-+        CV_LOG_INFO(nullptr, "Failed in sem_waite");
++        CV_LOG_INFO(NULL, "Failed in sem_waite");
 +    }
 +
 +    return ret;
@@ -218,8 +230,8 @@ index e5ae19f..44d39ce 100644
  /*****************************************
  * Method Name   : set_drp_end()
  * Description   : reset to OpenCVA inprocess
-@@ -2104,6 +2292,14 @@ int rzv2m_drp::set_drp_end()
-         CV_LOG_INFO(nullptr, "drp in process reset.");
+@@ -2295,6 +2483,14 @@ int rzv2m_drp::set_drp_end()
+         CV_LOG_INFO(NULL, "drp in process reset.");
      }
  #endif
 +
@@ -233,8 +245,8 @@ index e5ae19f..44d39ce 100644
      return DRP_NORMAL_END;
  }
  
-@@ -2143,6 +2339,19 @@ int rzv2m_drp::set_drp_start()
-         CV_LOG_INFO(nullptr, "drp in process set.");
+@@ -2334,6 +2530,19 @@ int rzv2m_drp::set_drp_start()
+         CV_LOG_INFO(NULL, "drp in process set.");
      }
  #endif
 +
@@ -244,7 +256,7 @@ index e5ae19f..44d39ce 100644
 +    ret_sem = DRP_sem_wait();
 +    if (0 != ret_sem)
 +    {
-+        CV_LOG_INFO(nullptr, "DRP_sem_wait error.");
++        CV_LOG_INFO(NULL, "DRP_sem_wait error.");
 +        // Return this error code as the calling DRP execution function determines 
 +        // that execution is not possible due to DRP_CONFLICT_ERROR.
 +        return DRP_CONFLICT_ERROR;
@@ -253,3 +265,6 @@ index e5ae19f..44d39ce 100644
      return DRP_NORMAL_END;
  }
  
+-- 
+2.25.1
+

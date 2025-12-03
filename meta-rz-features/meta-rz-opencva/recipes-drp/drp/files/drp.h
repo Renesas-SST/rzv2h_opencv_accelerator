@@ -2,7 +2,7 @@
 /*
  * Driver for the Renesas RZ/V2H DRPI unit
  *
- * Copyright (C) 2023 Renesas Electronics Corporation
+ * Copyright (C) 2026 Renesas Electronics Corporation
  *
  *
  * This program is free software; you can redistribute it and/or modify
