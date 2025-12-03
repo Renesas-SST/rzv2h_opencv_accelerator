@@ -1,8 +1,23 @@
+From c43f6d1fbcb13ffea0ad1715c131ad7ddc43950f Mon Sep 17 00:00:00 2001
+From: Cong Nguyen <cong.nguyen.zn@renesas.com>
+Date: Wed, 16 Apr 2025 10:51:00 +0000
+Subject: [PATCH 2/3] add drpai remap for opencva
+
+Upstream-Status: Pending
+
+Signed-off-by: Cong Nguyen <cong.nguyen.zn@renesas.com>
+---
+ modules/imgproc/include/opencv2/imgproc.hpp |   5 +
+ modules/imgproc/include/rzv2ma_drp.h        |  12 ++
+ modules/imgproc/src/imgwarp.cpp             | 208 ++++++++++++++++++++
+ modules/imgproc/src/rzv2ma_drp.cpp          | 195 +++++++++++++++++-
+ 4 files changed, 418 insertions(+), 2 deletions(-)
+
 diff --git a/modules/imgproc/include/opencv2/imgproc.hpp b/modules/imgproc/include/opencv2/imgproc.hpp
-index 2a3a803..d939248 100644
+index 46a62827ef..2d51d01f65 100644
 --- a/modules/imgproc/include/opencv2/imgproc.hpp
 +++ b/modules/imgproc/include/opencv2/imgproc.hpp
-@@ -2400,6 +2400,11 @@ CV_EXPORTS_W void remap( InputArray src, OutputArray dst,
+@@ -2560,6 +2560,11 @@ CV_EXPORTS_W void remap( InputArray src, OutputArray dst,
                           int interpolation, int borderMode = BORDER_CONSTANT,
                           const Scalar& borderValue = Scalar());
  
@@ -15,7 +30,7 @@ index 2a3a803..d939248 100644
  
  The function converts a pair of maps for remap from one representation to another. The following
 diff --git a/modules/imgproc/include/rzv2ma_drp.h b/modules/imgproc/include/rzv2ma_drp.h
-index 82af874..0fa9f81 100644
+index f7c0546c30..1197241c51 100644
 --- a/modules/imgproc/include/rzv2ma_drp.h
 +++ b/modules/imgproc/include/rzv2ma_drp.h
 @@ -116,6 +116,9 @@ const static int DRP_CONFLICT_ERROR = -5;
@@ -51,7 +66,7 @@ index 82af874..0fa9f81 100644
 +    void map_adr_64aligment(void);
 +
      uint64_t opencv_bin_addr64_phy;     // physical memory area address (64bit)
-     
+ 
      uint8_t opencv_bin_p[OCA_BIN_SIZE];      // opencva binary area(3.6M Byte = 400*1024*9 Byte)
 @@ -264,10 +274,12 @@ private:
      uint64_t dst_adr;   // physical address of dst
@@ -63,14 +78,14 @@ index 82af874..0fa9f81 100644
      uint32_t dst_size;
      uint32_t tmpl_size;
 +    uint32_t map_size;
-     
+ 
      drp_data_t proc[DRP_SEQ_NUM * 2];
  
 diff --git a/modules/imgproc/src/imgwarp.cpp b/modules/imgproc/src/imgwarp.cpp
-index 9318b94..546bc89 100644
+index ab1bbab743..01c41a1720 100644
 --- a/modules/imgproc/src/imgwarp.cpp
 +++ b/modules/imgproc/src/imgwarp.cpp
-@@ -1662,6 +1662,206 @@ private:
+@@ -1718,6 +1718,206 @@ private:
  
  }
  
@@ -78,13 +93,13 @@ index 9318b94..546bc89 100644
 +              InputArray _map1, InputArray _map2,
 +              int interpolation, int borderMode, const Scalar& borderValue)
 +{
-+    CV_LOG_INFO(nullptr, "remap_drp start.");
++    CV_LOG_INFO(NULL, "remap_drp start.");
 +
 +    /* get single instance */
 +    rzv2m_drp *drp = rzv2m_drp::get_instance();
 +    if(NULL == drp)
 +    {
-+        CV_LOG_INFO(nullptr, "remap_drp get instance");
++        CV_LOG_INFO(NULL, "remap_drp get instance");
 +        return DRP_NOT_EXECUTE;
 +    }
 +
@@ -216,7 +231,7 @@ index 9318b94..546bc89 100644
 +    result = drp->readBinaryHeader();
 +    if(DRP_NORMAL_END != result)
 +    {
-+        CV_LOG_INFO(nullptr, "rmap_drp read header error.");
++        CV_LOG_INFO(NULL, "rmap_drp read header error.");
 +        drp->set_drp_end();
 +        return DRP_NOT_EXECUTE;
 +    }
@@ -269,7 +284,7 @@ index 9318b94..546bc89 100644
 +
 +    drp->set_drp_end();
 +
-+    CV_LOG_INFO(nullptr, "remap_drp end.");
++    CV_LOG_INFO(NULL, "remap_drp end.");
 +
 +    return DRP_NORMAL_END;
 +}
@@ -277,7 +292,7 @@ index 9318b94..546bc89 100644
  void cv::remap( InputArray _src, OutputArray _dst,
                  InputArray _map1, InputArray _map2,
                  int interpolation, int borderType, const Scalar& borderValue )
-@@ -1724,6 +1924,14 @@ void cv::remap( InputArray _src, OutputArray _dst,
+@@ -1815,6 +2015,14 @@ void cv::remap( InputArray _src, OutputArray _dst,
  
      CV_Assert( dst.cols < SHRT_MAX && dst.rows < SHRT_MAX && src.cols < SHRT_MAX && src.rows < SHRT_MAX );
  
@@ -287,13 +302,13 @@ index 9318b94..546bc89 100644
 +        return;
 +    }
 +
-+    CV_LOG_INFO(nullptr, "remap_drp continue to normal opencv.");
++    CV_LOG_INFO(NULL, "remap_drp continue to normal opencv.");
 +
      if( dst.data == src.data )
          src = src.clone();
  
 diff --git a/modules/imgproc/src/rzv2ma_drp.cpp b/modules/imgproc/src/rzv2ma_drp.cpp
-index e5ae19f..36be693 100644
+index cf1d17cc33..f9a5052ca8 100644
 --- a/modules/imgproc/src/rzv2ma_drp.cpp
 +++ b/modules/imgproc/src/rzv2ma_drp.cpp
 @@ -284,6 +284,7 @@ int rzv2m_drp::setResizeParameter(uint16_t src_width, uint16_t src_height, uint1
@@ -619,3 +634,6 @@ index e5ae19f..36be693 100644
  /*****************************************
  * Method Name   : readDstImage
  * Description   : to read dst image from drp output area
+-- 
+2.25.1
+

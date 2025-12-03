@@ -51,7 +51,7 @@ None.
 ## 2.1. OpenCV Version  
 OpenCVA is based on as follows version of OpenCV.  
 **OpenCV 4.1.0-r0**  
-For datails, please see [OpenCV Document](https://docs.opencv.org/4.1.0/index.html)  
+For details, please see [OpenCV Document](https://docs.opencv.org/4.1.0/index.html)
 
 ## 2.2. How to use
 You can use OpenCVA same as OpenCV as usual and you do not need to consider of OpenCVA architecture. OpenCVA is automatically executed by DRP as follows if it matches the conditions under which DRP can be used. For the DRP using conditions, see [Chapter 4](#4-opencva-api-specification-and-condition-for-using-drp).  
