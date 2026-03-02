@@ -87,17 +87,10 @@ diff --git a/arch/arm64/boot/dts/renesas/rzv2h-rdk-ver1.dts b/arch/arm64/boot/dt
 index 2b8ba7d28b2f..5bd8a3fb1bf1 100644
 --- a/arch/arm64/boot/dts/renesas/rzv2h-rdk-ver1.dts
 +++ b/arch/arm64/boot/dts/renesas/rzv2h-rdk-ver1.dts
-@@ -760,6 +760,20 @@ &usb3_phy1 {
+@@ -760,6 +760,13 @@ &usb3_phy1 {
      status = "okay";
  };
  
-+&drp1 {
-+    memory-region = <&codec0>;
-+    memory-oca-region = <&opencva0>;
-+
-+    status = "okay";
-+};
-+
 +&drp1 {
 +    memory-region = <&codec0>;
 +    memory-oca-region = <&opencva0>;
